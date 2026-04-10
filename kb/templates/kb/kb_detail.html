@@ -1,0 +1,442 @@
+{% extends 'kb/base.html' %}
+
+{% block title %}{{ kb.name }} — Nexus{% endblock %}
+
+{% block extra_css %}
+<style>
+    .kb-layout {
+        display: grid;
+        grid-template-columns: 320px 1fr;
+        gap: 1.5rem;
+        align-items: start;
+    }
+
+    /* SIDEBAR */
+    .sidebar-section { margin-bottom: 1.5rem; }
+    .sidebar-title {
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 10px;
+    }
+
+    .doc-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 8px 10px;
+        background: var(--bg3);
+        border: 1px solid var(--border);
+        border-radius: 7px;
+        margin-bottom: 6px;
+    }
+
+    .doc-info { flex: 1; min-width: 0; }
+    .doc-name {
+        font-size: 13px;
+        font-weight: 500;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .doc-meta { font-size: 11px; color: var(--muted); margin-top: 1px; }
+
+    /* UPLOAD FORM */
+    .upload-form {
+        background: var(--bg3);
+        border: 1px dashed var(--border);
+        border-radius: 7px;
+        padding: 1rem;
+    }
+
+    .upload-form input[type="file"] {
+        font-size: 12px;
+        padding: 6px;
+        cursor: pointer;
+    }
+
+    /* CHAT */
+    .chat-container {
+        background: var(--bg2);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        display: flex;
+        flex-direction: column;
+        height: 680px;
+    }
+
+    .chat-header {
+        padding: 1rem 1.25rem;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .chat-header h2 { font-size: 15px; font-weight: 600; }
+    .chat-header p { font-size: 12px; color: var(--muted); }
+
+    .chat-messages {
+        flex: 1;
+        overflow-y: auto;
+        padding: 1.25rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .message-bubble {
+        max-width: 85%;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .message-bubble.user { align-self: flex-end; align-items: flex-end; }
+    .message-bubble.assistant { align-self: flex-start; }
+
+    .bubble-content {
+        padding: 10px 14px;
+        border-radius: 12px;
+        font-size: 13px;
+        line-height: 1.6;
+    }
+
+    .user .bubble-content {
+        background: var(--accent);
+        color: #fff;
+        border-bottom-right-radius: 3px;
+    }
+
+    .assistant .bubble-content {
+        background: var(--bg3);
+        border: 1px solid var(--border);
+        border-bottom-left-radius: 3px;
+        white-space: pre-wrap;
+    }
+
+    .bubble-meta { font-size: 11px; color: var(--muted); }
+
+    .sources-list {
+        margin-top: 8px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .source-tag {
+        font-size: 11px;
+        color: var(--muted);
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        padding: 3px 8px;
+        cursor: pointer;
+        transition: border-color 0.15s;
+    }
+
+    .source-tag:hover { border-color: var(--accent); color: var(--accent); }
+
+    .chat-input-area {
+        padding: 1rem 1.25rem;
+        border-top: 1px solid var(--border);
+        display: flex;
+        gap: 8px;
+        align-items: flex-end;
+    }
+
+    .chat-input-area textarea {
+        flex: 1;
+        resize: none;
+        min-height: 40px;
+        max-height: 120px;
+        overflow-y: auto;
+    }
+
+    .send-btn {
+        width: 40px;
+        height: 40px;
+        background: var(--accent);
+        border: none;
+        border-radius: 8px;
+        color: #fff;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 16px;
+        flex-shrink: 0;
+        transition: background 0.15s;
+    }
+
+    .send-btn:hover { background: var(--accent2); }
+    .send-btn:disabled { background: var(--border); cursor: not-allowed; }
+
+    .typing-indicator {
+        display: none;
+        align-items: center;
+        gap: 4px;
+        padding: 10px 14px;
+        background: var(--bg3);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        border-bottom-left-radius: 3px;
+        width: fit-content;
+    }
+
+    .typing-indicator.show { display: flex; }
+    .typing-dot {
+        width: 6px;
+        height: 6px;
+        background: var(--muted);
+        border-radius: 50%;
+        animation: typing 1.2s infinite;
+    }
+
+    .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes typing {
+        0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+        30% { transform: translateY(-4px); opacity: 1; }
+    }
+
+    .confidence-bar {
+        height: 3px;
+        background: var(--border);
+        border-radius: 2px;
+        margin-top: 6px;
+        overflow: hidden;
+    }
+
+    .confidence-fill {
+        height: 100%;
+        background: var(--accent);
+        border-radius: 2px;
+        transition: width 0.5s ease;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <div class="flex items-center gap-2" style="margin-bottom: 4px;">
+            <a href="{% url 'kb:home' %}" class="text-muted text-sm" style="text-decoration:none;">Knowledge Bases</a>
+            <span class="text-muted text-sm">/</span>
+            <span class="text-sm">{{ kb.name }}</span>
+        </div>
+        <h1>{{ kb.name }}</h1>
+        {% if kb.description %}<p>{{ kb.description }}</p>{% endif %}
+    </div>
+</div>
+
+<div class="kb-layout">
+    <!-- SIDEBAR -->
+    <div>
+        <div class="sidebar-section">
+            <div class="sidebar-title">Documents ({{ documents.count }})</div>
+
+            {% if documents %}
+                {% for doc in documents %}
+                <div class="doc-item">
+                    <div class="doc-info">
+                        <div class="doc-name">{{ doc.title }}</div>
+                        <div class="doc-meta">
+                            {% if doc.status == 'ready' %}
+                                {{ doc.total_chunks }} chunks
+                            {% else %}
+                                {{ doc.get_status_display }}
+                            {% endif %}
+                        </div>
+                    </div>
+                    <span class="badge badge-{{ doc.status }}">{{ doc.status }}</span>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div style="font-size:12px; color: var(--muted); padding: 8px 0;">No documents yet</div>
+            {% endif %}
+        </div>
+
+        <div class="sidebar-section">
+            <div class="sidebar-title">Upload Document</div>
+            <form class="upload-form" method="POST" action="{% url 'kb:upload_doc' kb.id %}" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label>Title</label>
+                    <input type="text" name="title" placeholder="Document name">
+                </div>
+                <div class="form-group">
+                    <label>File (PDF, TXT, MD)</label>
+                    <input type="file" name="file" accept=".pdf,.txt,.md" required>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width:100%">Upload & Process</button>
+            </form>
+        </div>
+
+        <!-- Stats -->
+        <div class="card">
+            <div class="sidebar-title">Stats</div>
+            <div style="display:flex; flex-direction:column; gap:8px;">
+                <div class="flex items-center" style="justify-content:space-between;">
+                    <span class="text-muted text-sm">Total queries</span>
+                    <span style="font-size:13px; font-weight:600;">{{ query_count }}</span>
+                </div>
+                <div class="flex items-center" style="justify-content:space-between;">
+                    <span class="text-muted text-sm">Documents ready</span>
+                    <span style="font-size:13px; font-weight:600;">{{ ready_count }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CHAT -->
+    <div class="chat-container">
+        <div class="chat-header">
+            <div>
+                <h2>Chat with Knowledge Base</h2>
+                <p>Ask questions about your documents</p>
+            </div>
+            <button class="btn btn-ghost btn-sm" onclick="clearChat()">Clear</button>
+        </div>
+
+        <div class="chat-messages" id="chatMessages">
+            <div class="message-bubble assistant">
+                <div class="bubble-content">
+                    Hi! I'm ready to answer questions about the documents in <strong>{{ kb.name }}</strong>. What would you like to know?
+                </div>
+            </div>
+        </div>
+
+        <div style="padding: 0 1.25rem;">
+            <div class="typing-indicator" id="typingIndicator">
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+            </div>
+        </div>
+
+        <div class="chat-input-area">
+            <textarea
+                id="chatInput"
+                placeholder="Ask a question about your documents..."
+                rows="1"
+                onkeydown="handleKeydown(event)"
+                oninput="autoResize(this)"
+            ></textarea>
+            <button class="send-btn" id="sendBtn" onclick="sendMessage()">↑</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const KB_ID = "{{ kb.id }}";
+const CSRF_TOKEN = "{{ csrf_token }}";
+let conversationId = null;
+
+function autoResize(el) {
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+}
+
+function handleKeydown(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+    }
+}
+
+function clearChat() {
+    conversationId = null;
+    const messages = document.getElementById('chatMessages');
+    messages.innerHTML = `
+        <div class="message-bubble assistant">
+            <div class="bubble-content">
+                Chat cleared. Ask me anything about <strong>{{ kb.name }}</strong>!
+            </div>
+        </div>`;
+}
+
+function addMessage(role, content, sources, confidence) {
+    const messages = document.getElementById('chatMessages');
+    const bubble = document.createElement('div');
+    bubble.className = `message-bubble ${role}`;
+
+    let sourcesHtml = '';
+    if (sources && sources.length > 0) {
+        const tags = sources.map(s =>
+            `<span class="source-tag" title="${s.excerpt}">
+                📄 ${s.document_title} p.${s.page_number || '?'} (${(s.relevance_score * 100).toFixed(0)}%)
+            </span>`
+        ).join('');
+        sourcesHtml = `<div class="sources-list">${tags}</div>`;
+
+        if (confidence) {
+            sourcesHtml += `
+                <div class="confidence-bar">
+                    <div class="confidence-fill" style="width: ${confidence * 100}%"></div>
+                </div>
+                <div class="bubble-meta">Confidence: ${(confidence * 100).toFixed(0)}%</div>`;
+        }
+    }
+
+    bubble.innerHTML = `
+        <div class="bubble-content">${content}</div>
+        ${sourcesHtml}`;
+
+    messages.appendChild(bubble);
+    messages.scrollTop = messages.scrollHeight;
+}
+
+async function sendMessage() {
+    const input = document.getElementById('chatInput');
+    const question = input.value.trim();
+    if (!question) return;
+
+    const sendBtn = document.getElementById('sendBtn');
+    const typing = document.getElementById('typingIndicator');
+
+    addMessage('user', question, null, null);
+    input.value = '';
+    input.style.height = 'auto';
+    sendBtn.disabled = true;
+    typing.classList.add('show');
+
+    document.getElementById('chatMessages').scrollTop = 99999;
+
+    try {
+        const body = conversationId
+            ? { conversation_id: conversationId, message: question }
+            : { knowledge_base_id: KB_ID, message: question };
+
+        const res = await fetch('/api/chat/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': CSRF_TOKEN,
+            },
+            body: JSON.stringify(body),
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+            conversationId = data.conversation_id;
+            addMessage('assistant', data.answer, data.sources, data.confidence);
+        } else {
+            addMessage('assistant', '⚠️ Error: ' + (data.detail || data.error || 'Something went wrong'), null, null);
+        }
+    } catch (err) {
+        addMessage('assistant', '⚠️ Error: ' + (data?.detail || data?.error || 'Rate limited. Wait 60s and retry.'), null, null);
+    } finally {
+        sendBtn.disabled = false;
+        typing.classList.remove('show');
+    }
+}
+</script>
+{% endblock %}

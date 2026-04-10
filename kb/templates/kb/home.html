@@ -1,0 +1,176 @@
+{% extends 'kb/base.html' %}
+
+{% block title %}Nexus — Knowledge Bases{% endblock %}
+
+{% block extra_css %}
+<style>
+    .kb-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 1rem;
+    }
+
+    .kb-card {
+        background: var(--bg2);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 1.25rem;
+        text-decoration: none;
+        color: inherit;
+        display: block;
+        transition: border-color 0.15s, transform 0.15s;
+    }
+
+    .kb-card:hover {
+        border-color: var(--accent);
+        transform: translateY(-1px);
+    }
+
+    .kb-card-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        margin-bottom: 8px;
+    }
+
+    .kb-icon {
+        width: 36px;
+        height: 36px;
+        background: var(--accent);
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 16px;
+        margin-bottom: 10px;
+    }
+
+    .kb-name {
+        font-size: 15px;
+        font-weight: 600;
+        margin-bottom: 4px;
+    }
+
+    .kb-desc {
+        font-size: 12px;
+        color: var(--muted);
+        margin-bottom: 12px;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .kb-meta {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 11px;
+        color: var(--muted);
+        border-top: 1px solid var(--border);
+        padding-top: 10px;
+    }
+
+    .kb-meta span { display: flex; align-items: center; gap: 4px; }
+
+    .stat-row {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+
+    .stat-card {
+        background: var(--bg2);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 1.25rem;
+    }
+
+    .stat-value { font-size: 28px; font-weight: 700; color: var(--accent); }
+    .stat-label { font-size: 12px; color: var(--muted); margin-top: 2px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>Knowledge Bases</h1>
+        <p>Manage your document collections and ask questions</p>
+    </div>
+    <button class="btn btn-primary" onclick="openModal()">+ New Knowledge Base</button>
+</div>
+
+<div class="stat-row">
+    <div class="stat-card">
+        <div class="stat-value">{{ kb_count }}</div>
+        <div class="stat-label">Knowledge Bases</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">{{ doc_count }}</div>
+        <div class="stat-label">Documents indexed</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">{{ query_count }}</div>
+        <div class="stat-label">Queries answered</div>
+    </div>
+</div>
+
+{% if knowledge_bases %}
+    <div class="kb-grid">
+        {% for kb in knowledge_bases %}
+        <a href="{% url 'kb:kb_detail' kb.id %}" class="kb-card">
+            <div class="kb-icon">📚</div>
+            <div class="kb-name">{{ kb.name }}</div>
+            <div class="kb-desc">{{ kb.description|default:"No description" }}</div>
+            <div class="kb-meta">
+                <span>📄 {{ kb.documents.count }} docs</span>
+                <span>🕐 {{ kb.created_at|date:"M d" }}</span>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="empty-state card">
+        <h3>No knowledge bases yet</h3>
+        <p>Create your first knowledge base to start uploading documents and asking questions.</p>
+        <button class="btn btn-primary" onclick="openModal()">+ Create Knowledge Base</button>
+    </div>
+{% endif %}
+
+<!-- Create KB Modal -->
+<div class="modal-overlay" id="createModal">
+    <div class="modal">
+        <h3>New Knowledge Base</h3>
+        <form method="POST" action="{% url 'kb:create_kb' %}">
+            {% csrf_token %}
+            <div class="form-group">
+                <label>Name</label>
+                <input type="text" name="name" placeholder="e.g. Company Docs" required autofocus>
+            </div>
+            <div class="form-group">
+                <label>Description (optional)</label>
+                <textarea name="description" rows="2" placeholder="What documents will this contain?"></textarea>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary">Create</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function openModal() {
+    document.getElementById('createModal').classList.add('active');
+}
+function closeModal() {
+    document.getElementById('createModal').classList.remove('active');
+}
+document.getElementById('createModal').addEventListener('click', function(e) {
+    if (e.target === this) closeModal();
+});
+</script>
+{% endblock %}

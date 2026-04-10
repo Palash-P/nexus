@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Nexus{% endblock %}</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --bg: #0f0f11;
+            --bg2: #17171a;
+            --bg3: #1e1e22;
+            --border: #2a2a30;
+            --text: #e8e8f0;
+            --muted: #8888a0;
+            --accent: #7c6af7;
+            --accent2: #5b4de0;
+            --success: #34d399;
+            --warning: #fbbf24;
+            --danger: #f87171;
+            --radius: 10px;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        /* NAV */
+        nav {
+            background: var(--bg2);
+            border-bottom: 1px solid var(--border);
+            padding: 0 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 56px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .nav-brand {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--accent);
+            text-decoration: none;
+            letter-spacing: -0.5px;
+        }
+
+        .nav-links { display: flex; align-items: center; gap: 8px; }
+
+        .nav-links a {
+            color: var(--muted);
+            text-decoration: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            transition: all 0.15s;
+            font-size: 13px;
+        }
+
+        .nav-links a:hover { color: var(--text); background: var(--bg3); }
+        .nav-links a.active { color: var(--text); background: var(--bg3); }
+
+        /* LAYOUT */
+        .container { max-width: 1100px; margin: 0 auto; padding: 2rem; }
+
+        /* CARDS */
+        .card {
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+        }
+
+        /* BUTTONS */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            border-radius: 7px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            text-decoration: none;
+            border: none;
+            transition: all 0.15s;
+        }
+
+        .btn-primary { background: var(--accent); color: #fff; }
+        .btn-primary:hover { background: var(--accent2); }
+        .btn-ghost { background: transparent; color: var(--muted); border: 1px solid var(--border); }
+        .btn-ghost:hover { color: var(--text); border-color: var(--muted); }
+        .btn-danger { background: transparent; color: var(--danger); border: 1px solid #f871714d; }
+        .btn-danger:hover { background: #f871711a; }
+        .btn-sm { padding: 5px 10px; font-size: 12px; }
+
+        /* FORMS */
+        input, textarea, select {
+            width: 100%;
+            background: var(--bg3);
+            border: 1px solid var(--border);
+            border-radius: 7px;
+            color: var(--text);
+            padding: 8px 12px;
+            font-size: 13px;
+            font-family: inherit;
+            outline: none;
+            transition: border-color 0.15s;
+        }
+
+        input:focus, textarea:focus, select:focus { border-color: var(--accent); }
+        label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+
+        .form-group { margin-bottom: 1rem; }
+
+        /* BADGES */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 2px 8px;
+            border-radius: 99px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        .badge-ready { background: #34d39920; color: var(--success); }
+        .badge-pending { background: #fbbf2420; color: var(--warning); }
+        .badge-processing { background: #7c6af720; color: var(--accent); }
+        .badge-failed { background: #f8717120; color: var(--danger); }
+
+        /* MESSAGES */
+        .messages { margin-bottom: 1rem; }
+        .message {
+            padding: 10px 14px;
+            border-radius: 7px;
+            font-size: 13px;
+            margin-bottom: 8px;
+        }
+        .message-success { background: #34d39920; color: var(--success); border: 1px solid #34d39940; }
+        .message-error { background: #f8717120; color: var(--danger); border: 1px solid #f8717140; }
+
+        /* PAGE HEADER */
+        .page-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.5rem;
+        }
+
+        .page-header h1 { font-size: 20px; font-weight: 600; }
+        .page-header p { color: var(--muted); font-size: 13px; margin-top: 2px; }
+
+        /* EMPTY STATE */
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: var(--muted);
+        }
+
+        .empty-state h3 { font-size: 15px; margin-bottom: 6px; color: var(--text); }
+        .empty-state p { font-size: 13px; margin-bottom: 1rem; }
+
+        /* MODAL */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.7);
+            z-index: 200;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-overlay.active { display: flex; }
+
+        .modal {
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            width: 100%;
+            max-width: 440px;
+            margin: 1rem;
+        }
+
+        .modal h3 { font-size: 16px; margin-bottom: 1rem; }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            margin-top: 1.25rem;
+        }
+
+        /* UTILS */
+        .flex { display: flex; }
+        .items-center { align-items: center; }
+        .gap-2 { gap: 8px; }
+        .gap-3 { gap: 12px; }
+        .mt-1 { margin-top: 4px; }
+        .mt-2 { margin-top: 8px; }
+        .mt-3 { margin-top: 12px; }
+        .text-muted { color: var(--muted); }
+        .text-sm { font-size: 12px; }
+        .font-mono { font-family: 'SF Mono', 'Fira Code', monospace; }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <nav>
+        <a href="{% url 'kb:home' %}" class="nav-brand">⬡ Nexus</a>
+        <div class="nav-links">
+            <a href="{% url 'kb:home' %}" {% if request.resolver_match.url_name == 'home' %}class="active"{% endif %}>Knowledge Bases</a>
+            <a href="{% url 'kb:analytics' %}" {% if request.resolver_match.url_name == 'analytics' %}class="active"{% endif %}>Analytics</a>
+            {% if user.is_authenticated %}
+                <a href="{% url 'kb:logout' %}">Logout</a>
+            {% endif %}
+        </div>
+    </nav>
+
+    <div class="container">
+        {% if messages %}
+            <div class="messages">
+                {% for message in messages %}
+                    <div class="message message-{{ message.tags }}">{{ message }}</div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        {% block content %}{% endblock %}
+    </div>
+
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

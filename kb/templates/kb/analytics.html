@@ -1,0 +1,154 @@
+{% extends 'kb/base.html' %}
+
+{% block title %}Analytics — Nexus{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+
+    .stat-card {
+        background: var(--bg2);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 1.25rem;
+    }
+
+    .stat-value { font-size: 32px; font-weight: 700; color: var(--accent); line-height: 1; }
+    .stat-label { font-size: 12px; color: var(--muted); margin-top: 6px; }
+
+    .queries-table { width: 100%; border-collapse: collapse; }
+    .queries-table th {
+        text-align: left;
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        padding: 8px 12px;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .queries-table td {
+        padding: 10px 12px;
+        font-size: 13px;
+        border-bottom: 1px solid var(--border);
+        vertical-align: top;
+    }
+
+    .queries-table tr:last-child td { border-bottom: none; }
+    .queries-table tr:hover td { background: var(--bg3); }
+
+    .question-cell { max-width: 360px; }
+    .answer-preview {
+        font-size: 12px;
+        color: var(--muted);
+        margin-top: 2px;
+        display: -webkit-box;
+        -webkit-line-clamp: 1;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .conf-pill {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 99px;
+        font-size: 11px;
+        font-weight: 500;
+    }
+
+    .conf-high { background: #34d39920; color: var(--success); }
+    .conf-mid  { background: #fbbf2420; color: var(--warning); }
+    .conf-low  { background: #f8717120; color: var(--danger); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>Analytics</h1>
+        <p>Usage statistics and query history</p>
+    </div>
+</div>
+
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-value">{{ stats.total_queries|default:0 }}</div>
+        <div class="stat-label">Total queries</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">{{ stats.documents_indexed|default:0 }}</div>
+        <div class="stat-label">Documents indexed</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">{{ stats.knowledge_bases|default:0 }}</div>
+        <div class="stat-label">Knowledge bases</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">${{ stats.total_cost_usd|default:"0.00" }}</div>
+        <div class="stat-label">Total API cost</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">{{ stats.avg_response_time_ms|default:0 }}ms</div>
+        <div class="stat-label">Avg response time</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">{{ stats.avg_confidence_pct|default:0 }}%</div>
+        <div class="stat-label">Avg confidence</div>
+    </div>
+</div>
+
+<div class="card">
+    <div style="font-size:13px; font-weight:600; margin-bottom:1rem;">Recent Queries</div>
+
+    {% if recent_queries %}
+    <div style="overflow-x:auto;">
+        <table class="queries-table">
+            <thead>
+                <tr>
+                    <th>Question</th>
+                    <th>Confidence</th>
+                    <th>Time</th>
+                    <th>Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for q in recent_queries %}
+                <tr>
+                    <td class="question-cell">
+                        <div>{{ q.question|truncatechars:80 }}</div>
+                        <div class="answer-preview">{{ q.answer|truncatechars:100 }}</div>
+                    </td>
+                    <td>
+                        {% if q.confidence %}
+                            {% if q.confidence >= 0.7 %}
+                                <span class="conf-pill conf-high">{{ q.confidence_pct }}%</span>
+                            {% elif q.confidence >= 0.5 %}
+                                <span class="conf-pill conf-mid">{{ q.confidence_pct }}%</span>
+                            {% else %}
+                                <span class="conf-pill conf-low">{{ q.confidence_pct }}%</span>
+                            {% endif %}
+                        {% else %}
+                            <span class="text-muted">—</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-muted">{{ q.response_time_ms }}ms</td>
+                    <td class="text-muted">{{ q.created_at|date:"M d, H:i" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state" style="padding: 2rem;">
+        <h3>No queries yet</h3>
+        <p>Start asking questions to see analytics here.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
