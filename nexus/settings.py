@@ -151,3 +151,6 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.IsAuthenticated',
     ],
 }
+
+LOGIN_URL = '/admin/login/'
+LOGIN_REDIRECT_URL = '/'
