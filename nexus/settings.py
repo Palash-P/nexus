@@ -154,3 +154,5 @@ REST_FRAMEWORK = {
 
 LOGIN_URL = '/admin/login/'
 LOGIN_REDIRECT_URL = '/'
+CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', default='http://localhost').split(',')
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
