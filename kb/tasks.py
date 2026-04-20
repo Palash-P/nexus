@@ -1,17 +1,19 @@
 import logging
 import time
+import tempfile
+import os
+import urllib.request
 from celery import shared_task
 from django.utils import timezone
 from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
-CHUNK_SIZE = 800        # characters per chunk
-CHUNK_OVERLAP = 100     # overlap between chunks
+CHUNK_SIZE = 800
+CHUNK_OVERLAP = 100
 
 
 def chunk_text(text: str, chunk_size: int = CHUNK_SIZE, overlap: int = CHUNK_OVERLAP) -> list[str]:
-    """Split text into overlapping chunks."""
     if not text.strip():
         return []
     chunks = []
@@ -28,7 +30,6 @@ def chunk_text(text: str, chunk_size: int = CHUNK_SIZE, overlap: int = CHUNK_OVE
 
 
 def extract_text_from_pdf(file_path: str) -> tuple[str, dict[int, str]]:
-    """Returns (full_text, {page_num: page_text})."""
     try:
         import pdfplumber
         page_texts = {}
@@ -41,7 +42,6 @@ def extract_text_from_pdf(file_path: str) -> tuple[str, dict[int, str]]:
         return full_text, page_texts
     except Exception as e:
         logger.error(f"PDF extraction failed: {e}")
-        # Fallback: try PyPDF2
         try:
             import PyPDF2
             page_texts = {}
@@ -59,7 +59,6 @@ def extract_text_from_pdf(file_path: str) -> tuple[str, dict[int, str]]:
 
 def get_embeddings(texts: list) -> list:
     import google.generativeai as genai
-    import time
     genai.configure(api_key=settings.GEMINI_API_KEY)
     embeddings = []
     batch_size = 5
@@ -71,16 +70,20 @@ def get_embeddings(texts: list) -> list:
             task_type="retrieval_document",
         )
         embeddings.extend(result['embedding'])
-        time.sleep(1)  # 1 second between batches
+        time.sleep(1)
     return embeddings
+
+
+def download_to_temp(file_url: str, suffix: str) -> str:
+    """Download file from Cloudinary URL to a temp file, return temp path."""
+    tmp = tempfile.NamedTemporaryFile(suffix=f'.{suffix}', delete=False)
+    tmp.close()
+    urllib.request.urlretrieve(file_url, tmp.name)
+    return tmp.name
 
 
 @shared_task(bind=True, max_retries=3)
 def process_document(self, document_id: str):
-    """
-    Full pipeline: extract text → chunk → embed → store in pgvector.
-    Called after a document is uploaded.
-    """
     from kb.models import Document, DocumentChunk
 
     try:
@@ -92,27 +95,28 @@ def process_document(self, document_id: str):
     doc.status = Document.Status.PROCESSING
     doc.save(update_fields=['status'])
 
+    tmp_path = None
+
     try:
-        file_path = doc.file.path
+        # ✅ Use URL instead of local path (Cloudinary fix)
+        file_url = doc.file.url
+        tmp_path = download_to_temp(file_url, doc.file_type)
 
         # 1. Extract text
         if doc.file_type == 'pdf':
-            full_text, page_texts = extract_text_from_pdf(file_path)
+            full_text, page_texts = extract_text_from_pdf(tmp_path)
         else:
-            # Plain text / markdown
-            with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+            with open(tmp_path, 'r', encoding='utf-8', errors='ignore') as f:
                 full_text = f.read()
             page_texts = {1: full_text}
 
-        full_text = full_text.replace('\x00', '')  
+        full_text = full_text.replace('\x00', '')
         page_texts = {k: v.replace('\x00', '') for k, v in page_texts.items()}
-
 
         if not full_text.strip():
             raise ValueError("No text could be extracted from this document")
 
         # 2. Chunk with page tracking
-        # Build page-aware chunks
         chunks_with_pages = []
         if doc.file_type == 'pdf' and page_texts:
             for page_num, page_text in page_texts.items():
@@ -126,14 +130,14 @@ def process_document(self, document_id: str):
         if not chunks_with_pages:
             raise ValueError("Document produced no chunks after processing")
 
-        # 3. Embed all chunks in one batch
+        # 3. Embed
         texts_to_embed = [c['text'] for c in chunks_with_pages]
         embeddings = get_embeddings(texts_to_embed)
 
         # 4. Delete old chunks if reprocessing
         DocumentChunk.objects.filter(document=doc).delete()
 
-        # 5. Bulk create chunks
+        # 5. Bulk create
         chunk_objects = [
             DocumentChunk(
                 document=doc,
@@ -162,3 +166,8 @@ def process_document(self, document_id: str):
         doc.error_message = str(exc)
         doc.save(update_fields=['status', 'error_message'])
         raise self.retry(exc=exc, countdown=60)
+
+    finally:
+        # Always clean up temp file
+        if tmp_path and os.path.exists(tmp_path):
+            os.unlink(tmp_path)
