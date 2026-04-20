@@ -2,7 +2,7 @@ from django.db import models
 from django.contrib.auth.models import User
 from pgvector.django import VectorField
 import uuid
-
+from cloudinary_storage.storage import MediaCloudinaryStorage
 
 class KnowledgeBase(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -30,7 +30,7 @@ class Document(models.Model):
     knowledge_base = models.ForeignKey(KnowledgeBase, on_delete=models.CASCADE, related_name='documents')
     uploaded_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     title = models.CharField(max_length=500)
-    file = models.FileField(upload_to='documents/%Y/%m/')
+    file = models.FileField(upload_to='documents/%Y/%m/',storage=MediaCloudinaryStorage())
     file_type = models.CharField(max_length=20, default='pdf')  # pdf, txt, md
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
     total_chunks = models.IntegerField(default=0)
