@@ -91,6 +91,11 @@ def process_document(self, document_id: str):
     except Document.DoesNotExist:
         logger.error(f"Document {document_id} not found")
         return
+    
+    # ADD THESE TWO LINES
+    logger.info(f"File name: {doc.file.name}")
+    logger.info(f"File URL: {doc.file.url}")
+
 
     doc.status = Document.Status.PROCESSING
     doc.save(update_fields=['status'])
