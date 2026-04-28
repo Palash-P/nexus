@@ -7,6 +7,7 @@ from .views import (
     # Template views
     home_view, create_kb_view, kb_detail_view,
     upload_doc_view, analytics_view, logout_view,
+    health_check,
 )
 
 router = DefaultRouter()
@@ -21,6 +22,7 @@ api_urlpatterns = [
     path('chat/', ChatView.as_view(), name='chat'),
     path('search/', SearchView.as_view(), name='search'),
     path('analytics/', AnalyticsView.as_view(), name='analytics'),
+    path('health/', health_check, name='health_check'), 
 ]
 
 # Template URLs

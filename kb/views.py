@@ -4,6 +4,8 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from django.shortcuts import get_object_or_404
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
 
 from .models import KnowledgeBase, Document, Conversation, Message, Query
 from .serializers import (
@@ -341,3 +343,23 @@ def analytics_view(request):
 def logout_view(request):
     auth_logout(request)
     return redirect('/admin/login/?next=/')
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def health_check(request):
+    from django.conf import settings
+    import google.generativeai as genai
+    genai.configure(api_key=settings.GEMINI_API_KEY)
+    try:
+        models = list(genai.list_models())
+        return Response({
+            'key_prefix': settings.GEMINI_API_KEY[:10],
+            'models_count': len(models),
+            'status': 'ok'
+        })
+    except Exception as e:
+        return Response({
+            'key_prefix': settings.GEMINI_API_KEY[:10],
+            'error': str(e),
+            'status': 'failed'
+        })
